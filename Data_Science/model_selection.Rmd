@@ -1,0 +1,91 @@
+---
+title: "Model_selection"
+author: "Fernando Loaiza"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## Introduction
+
+In this analysis, we explore the use of Lasso regression to model housing prices based on various characteristics. We will randomly select a training sample of 600 observations from a dataset of houses sold in Baton Rouge, LA in 2005.
+
+## Data Loading and Preliminary Analysis
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+# Load required packages
+library(glmnet)
+
+# Load the data
+br <- read.table("/Users/fernandoloaizae/Library/CloudStorage/OneDrive-Personal/GitHub/Data_Projects/Data_Science/lab1/br.csv", sep = ",", header = TRUE)
+attach(br)
+
+# Load the dataset and set parameters
+Ntot <- nrow(br)  # Total number of observations
+set.seed(401)     # Random seed for reproducibility
+N <- 600          # Size of the training sample
+s <- sample(1:Ntot, N)  # Index of selected units for training
+
+# Partition the dataset
+y.train <- price[s]
+y.test <- price[-s]
+
+# Create dummy variables for categorical features
+Occ <- model.matrix(~factor(Occupancy))[,2:3]  # Dummies for Occupancy
+Sty <- model.matrix(~factor(Style))[,2:10]     # Dummies for Style
+
+# Prepare the feature matrix
+X <- data.frame(sqft, sqft^2, Age, Age^2, sqft*Age, Pool, Bedrooms, Fireplace, Waterfront, Occ, Sty)
+X.train <- as.matrix(X[s, ])
+X.test <- as.matrix(X[-s, ])
+
+# Display the first few rows of the test data
+head(X.test)
+
+######################################################################### 
+## Lasso Regression (y and X are standardized by glmnet)
+#########################################################################
+
+# Fit Lasso model
+fit.lasso <- glmnet(X.train, y.train, family = "gaussian")
+
+# Plot the Lasso model
+plot(fit.lasso, label = TRUE)
+plot(fit.lasso, xvar = "lambda", label = TRUE)
+
+# Display the Lasso model fit
+fit.lasso
+
+# Perform cross-validation to find optimal lambda
+cv.fit <- cv.glmnet(X.train, y.train, nfolds = 20)
+
+# Plot the cross-validation results
+plot(cv.fit)
+
+# Extract coefficients at the optimal lambda (lambda.min)
+coef(cv.fit, s = "lambda.min")
+
+#########################################################################
+## Prediction and Model Evaluation
+#########################################################################
+
+# Make predictions on the test data using the optimal lambda
+y.test.lasso <- predict(cv.fit, newx = X.test, s = "lambda.min")
+
+# Make predictions on the test data using the full model (no shrinkage)
+y.test.full <- predict(cv.fit, newx = X.test, s = 0)
+
+# Compare actual vs predicted values
+pairs(cbind(y.test, y.test.lasso, y.test.full))
+
+# Calculate prediction errors
+pred.errors.lasso <- y.test - y.test.lasso  # Errors for Lasso model
+pred.errors.full <- y.test - y.test.full    # Errors for full model
+
+# Compute mean squared errors (MSE)
+mse.lasso <- mean(pred.errors.lasso^2)
+mse.full <- mean(pred.errors.full^2)
+
+# Percent gain in accuracy due to shrinkage
+accuracy_gain <- 100 * (1 - mse.lasso / mse.full)
+accuracy_gain
+```

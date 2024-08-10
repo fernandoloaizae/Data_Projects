@@ -1,0 +1,117 @@
+#install.packages("splines") # if so then use package splines
+library(splines)
+#################################################################
+# Simulated example
+N = 100;
+x = runif(100, 0,1);  # random design 
+f = ((exp(1.2*x)+1.5*sin(7*x))-1)/3; #true regression function in this simulation
+e =  rnorm(N, 0, 0.15);
+y = f+e;                     # observations 
+plot(x, f, col="blue");
+lines(x, y, type="p", col="red");
+#########################################################
+# Global polynomial fit
+# The library splines has the poly() function available 
+# to fit a polynomial regression
+#########################################################
+polyfit2 = lm(y ~ poly(x, 2)); # quadratic
+summary(polyfit2)
+polyfit3 = lm(y ~ poly(x, 3)); # cubic
+summary(polyfit3)
+plot(x, y);
+lines(sort(x), polyfit3$fit[order(x)], col = 2, lwd = 3);
+########################################################
+# Linear spline with 4 equally spaced knots 
+knots = c(0.2, 0.4, 0.6, 0.8 );
+# plot of B-spline basis
+matplot(x, bs(x, knots = knots, degree = 1), type = "p", main = "spline basis"); 
+splinefit_l = lm(y ~bs(x, knots = knots, degree = 1));
+plot(x, y);
+lines(sort(x), splinefit_l$fit[order(x)], col = 2, lwd = 1);
+# bs(x, df-1, knots, degree) generates the B-spline basis matrix 
+# for a polynomial spline 
+# df: degrees of freedom; df = K + 4, where K is the number of knots 
+# plot of spline basis (B-spline)
+matplot(x, bs(x, 6, degree = 3), type = "p", main = "spline basis"); # cubic p spline
+matplot(x, bs(x, 6, degree = 1), type = "p", main = "spline basis"); # linear
+#######################################################
+splinefit0 = lm(y ~bs(x, 3)); 
+summary(splinefit0);
+# when K=0 the fit is the same as polyfit3
+summary(polyfit3);
+splinefit2 = lm(y ~ bs(x, 5)); summary(splinefit2); # K = 2
+splinefit5 = lm(y ~ bs(x, 8)); summary(splinefit5); # K = 5
+splinefit10 = lm(y ~ bs(x, 13)); summary(splinefit10); # K = 10
+splinefit20 = lm(y ~ bs(x, 23)); summary(splinefit20); # K = 20
+# Selection #####################################################
+# BIC
+extractAIC(splinefit2, k= log(N)); extractAIC(splinefit5, k=log(N));
+extractAIC(splinefit10, k= log(N)); extractAIC(splinefit20, k= log(N));
+extractAIC(polyfit3, k= log(N));
+# AIC
+extractAIC(splinefit2); extractAIC(splinefit5);
+extractAIC(splinefit10); extractAIC(splinefit20); extractAIC(polyfit3);
+
+windows();
+plot(x, y);
+lines(sort(x), polyfit3$fit[order(x)], col = 2, lwd = 3);
+lines(sort(x), splinefit2$fit[order(x)], col = 3, lwd = 3);
+lines(sort(x), splinefit5$fit[order(x)], col = 4, lwd = 3);
+lines(sort(x), splinefit10$fit[order(x)], col = 5, lwd = 3);
+lines(sort(x), splinefit20$fit[order(x)], col = 6, lwd = 3);
+legend(0.5,1.5, c("P3", "K=2", "K=5", "K=10", "K=20"), lty=1, col = 2:6 )
+# the h_i values (Hat matrix )
+plot(x,hatvalues(splinefit10), type="p");
+plot(x,hatvalues(splinefit2), type="p");
+############################################### 
+# Comparison with linear spline
+lsplinefit5 = lm(y ~ bs(x, 5+1, degree = 1 )); summary(lsplinefit5); # K = 5
+windows()
+plot(x, y); 
+lines(sort(x), splinefit5$fit[order(x)], col = 2, lwd = 3);
+lines(sort(x), lsplinefit5$fit[order(x)], col = 3, lwd = 3);
+legend(0.5,1.5, c("cubic", "linear"), lty=1, col = 2:6 )
+# Comparison with true regression function 
+windows()
+plot(x, y); 
+lines(sort(x), f[order(x)]  , col = 2, lwd = 3);
+lines(sort(x),  splinefit5$fit[order(x)], col = 3, lwd = 3);
+legend(0.5,0.5, c("true", "cubic"), lty=1, col = 2:6 );
+
+###############################################################
+# Natural cubic splines
+# ns(x, K-1) 
+# 2 boundary knots are located at the min and max of x
+linearfit = lm(y ~ ns(x, 1)); summary(linearfit); # K = 0
+splinefit2 = lm(y ~ ns(x, 3)); summary(splinefit2); # K = 2
+splinefit5 = lm(y ~ ns(x, 6)); summary(splinefit5); # K = 5
+splinefit10 = lm(y ~ ns(x, 11)); summary(splinefit10); # K = 10
+splinefit20 = lm(y ~ ns(x, 21)); summary(splinefit20); # K = 20
+# Selection #####################################################
+# BIC
+extractAIC(splinefit2, k= log(N)); extractAIC(splinefit5, k=log(N));
+extractAIC(splinefit10, k= log(N)); extractAIC(splinefit20, k= log(N));
+extractAIC(polyfit3, k= log(N));
+# AIC
+extractAIC(splinefit2); extractAIC(splinefit5);
+extractAIC(splinefit10); extractAIC(splinefit20); extractAIC(polyfit3);
+
+windows();
+plot(x, y);
+lines(sort(x), linearfit$fit[order(x)], col = 2, lwd = 3);
+lines(sort(x), splinefit2$fit[order(x)], col = 3, lwd = 3);
+lines(sort(x), splinefit5$fit[order(x)], col = 4, lwd = 3);
+lines(sort(x), splinefit10$fit[order(x)], col = 5, lwd = 3);
+lines(sort(x), splinefit20$fit[order(x)], col = 6, lwd = 3);
+legend(0.5,0.5, c("Linear fit", "K=2", "K=5", "K=10", "K=20"), lty=1, col = 2:6 )
+
+
+maxK = 25;
+vBIC = rep(0, maxK); vAIC = rep(0, maxK);
+for (i in 1:maxK)
+{
+  splft = lm(y ~ ns(x, i ));
+  vBIC[i] = extractAIC(splft, k= log(N))[2];
+  vAIC[i] = extractAIC(splft)[2];
+}
+plot(1:maxK,  vAIC )

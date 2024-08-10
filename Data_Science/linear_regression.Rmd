@@ -1,0 +1,140 @@
+---
+title: "Linear_regression"
+author: "Fernando Loaiza"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+https://github.com/sajal2692/data-science-portfolio?tab=readme-ov-file
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The data used in this analysis comes from *Principles of Econometrics* by Hill, Griffiths, and Lim (Wiley, 2008). The dataset `br.csv` includes 1080 observations on the prices and characteristics of houses sold in Baton Rouge, LA in 2005. The variables considered in the analysis are:
+
+- **price**: Price of the house (in dollars)
+- **sqft**: Total square feet
+- **bedrooms**: Number of bedrooms
+- **baths**: Number of full baths
+- **age**: Age of the house in years
+- **Occupancy**: Owner = 1, Vacant = 2, Tenant = 3
+- **Pool**: Yes = 1, No = 0
+- **Style**: 
+  - Traditional = 1
+  - Townhouse = 2
+  - Ranch = 3
+  - New Orleans = 4
+  - Mobile Home = 5
+  - Garden = 6
+  - French = 7
+  - Cottage = 8
+  - Contemporary = 9
+  - Colonial = 10
+  - Acadian = 11
+- **Fireplace**: Yes = 1, No = 0
+- **Waterfront**: Yes = 1, No = 0
+- **DOM**: Days on the market
+
+## Data Loading and Preliminary Analysis
+
+```{r}
+# Load the data
+br <- read.table("/Users/fernandoloaizae/Library/CloudStorage/OneDrive-Personal/GitHub/Data_Projects/Data_Science/lab1/br.csv", sep = ",", header = TRUE)
+attach(br)
+
+# Histogram of price
+hist(price, 30, col = "blue", main = "Histogram of Price")
+
+# Histogram of log-transformed price
+hist(log(price), 30, col = "red", main = "Histogram of Log-Transformed Price")
+
+# Scatterplot of prices vs square feet
+plot(sqft, price, col = "red", main = "Price vs Square Feet")
+
+# Scatterplot of prices vs age
+plot(Age, price, col = "red", main = "Price vs Age")
+
+# Boxplot of price by Occupancy
+plot(factor(Occupancy), price, col = 'red', main = "Price by Occupancy")
+
+# Boxplot of price by Style
+plot(factor(Style), price, col = 'yellow', main = "Price by Style")
+
+# Pair plot of price against square feet and age
+pairs(price ~ sqft + Age, upper.panel = panel.smooth)
+
+
+# Linear regression model
+regr <- lm(price ~ sqft + Age + Pool + Bedrooms + Fireplace + Waterfront + DOM)
+summary(regr)
+
+# OLS coefficients
+coefficients(regr)
+
+# Covariance matrix for model parameters
+CovBeta <- vcov(regr)
+CovBeta[2,2]  # Variance of beta_1_hat
+sqrt(CovBeta[2,2])  # Standard error of beta_1_hat
+
+# t statistic for beta_1_hat
+coefficients(regr)[2] / sqrt(CovBeta[2,2])
+
+# Confidence intervals for model parameters
+confint(regr, level = 0.95)
+
+# Fitted values and residuals
+yf <- fitted(regr)
+e <- residuals(regr)
+
+# Property of the residuals: zero mean
+mean(e)
+
+# Histogram of residuals
+hist(e, 60, col = 'blue', main = 'Histogram of Residuals')
+
+# Correlation checks
+cor(yf, e)  # Residuals uncorrelated with fitted values
+cor(sqft, e)  # Residuals uncorrelated with sqft
+
+# Plot of predicted vs observed values
+plot(price, yf, col = "red", main = "Predicted vs Observed Prices")
+
+# Plot of residuals vs observed values
+plot(price, e, col = "red", main = "Residuals vs Observed Prices")
+abline(h = 0)
+
+# Plot of residuals vs predicted values
+plot(yf, e, col = "red", main = "Residuals vs Predicted Prices")
+abline(h = 0)
+
+# Hat values (leverages)
+h <- hatvalues(regr)
+sum(h)  # Trace(H) = p+1
+mean(h)
+
+# Barplot of hat values
+barplot(h, col = 'blue', main = "Hat Values")
+abline(h = mean(h), col = 'red')
+
+# Standardized residuals
+r <- rstandard(regr)
+
+# Plot of standardized residuals vs fitted values
+plot(yf, r, main = "Standardized Residuals vs Fitted Values")
+
+# Plot of standardized residuals vs hat values
+plot(h, r, main = "Standardized Residuals vs Hat Values")
+
+# Regression model with categorical variables
+regr2 <- lm(price ~ sqft + Age + Pool + Bedrooms + Pool + Fireplace + Waterfront + DOM + factor(Occupancy) + factor(Style))
+summary(regr2)
+
+# Model updates by adding and removing variables
+summary(update(regr2,  .~. - Fireplace))
+summary(update(regr2,  .~. - factor(Occupancy)))
+```
+
+
